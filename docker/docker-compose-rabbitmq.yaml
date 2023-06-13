@@ -1,0 +1,22 @@
+version: '2.3'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    volumes:
+        - rabbitdata-conductor:/var/lib/rabbitmq/
+        - rabbitlogs-conductor:/var/log/rabbitmq
+    networks:
+      - internal
+    ports:
+        - 5672:5672
+        - 15672:15672
+
+volumes:
+  rabbitdata-conductor:
+    driver: local
+  rabbitlogs-conductor:
+    driver: local
+
+networks:
+  internal:

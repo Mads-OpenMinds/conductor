@@ -39,11 +39,12 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-web'
 
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation "io.orkes.queues:orkes-conductor-queues:${revOrkesQueues}"
 
     implementation "org.springdoc:springdoc-openapi-ui:${revOpenapi}"
 
     runtimeOnly "org.glassfish.jaxb:jaxb-runtime:${revJAXB}"
+    runtimeOnly group: 'com.netflix.conductor', name: 'conductor-postgres-persistence', version: '3.13.7'
+    runtimeOnly group: 'com.netflix.conductor', name: 'conductor-amqp', version: '3.13.7'
 
     testImplementation project(':conductor-rest')
     testImplementation project(':conductor-common')

@@ -3,12 +3,13 @@ import React from "react";
 import { Route, Switch } from "react-router-dom";
 import { makeStyles } from "@material-ui/styles";
 import { Button, AppBar, Toolbar } from "@material-ui/core";
-import AppLogo from "./plugins/AppLogo";
+import AppLogo from "./components/AppLogo";
 import NavLink from "./components/NavLink";
 
 import WorkflowSearch from "./pages/executions/WorkflowSearch";
 import TaskSearch from "./pages/executions/TaskSearch";
 
+import Deployments from "./pages/deployments/Deployments"
 import Execution from "./pages/execution/Execution";
 import WorkflowDefinitions from "./pages/definitions/Workflow";
 import WorkflowDefinition from "./pages/definition/WorkflowDefinition";
@@ -22,10 +23,8 @@ import DiagramTest from "./pages/kitchensink/DiagramTest";
 import Examples from "./pages/kitchensink/Examples";
 import Gantt from "./pages/kitchensink/Gantt";
 
-import CustomRoutes from "./plugins/CustomRoutes";
-import AppBarModules from "./plugins/AppBarModules";
-import CustomAppBarButtons from "./plugins/CustomAppBarButtons";
 import Workbench from "./pages/workbench/Workbench";
+import WorkflowProcesses from "./pages/deployments/WorkflowProcesses";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -47,7 +46,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function App() {
+export default function App({
+  appBarModules,
+  appBarButtons,
+  customAppLogo,
+  customRoutes,
+}) {
   const classes = useStyles();
 
   return (
@@ -59,9 +63,13 @@ export default function App() {
             regular: classes.toolbarRegular,
           }}
         >
-          <AppLogo />
+          {customAppLogo || <AppLogo />}
+
           <Button component={NavLink} path="/">
-            Executions
+            Deployments
+          </Button>
+          <Button component={NavLink} path="/search/workflows">
+            Search
           </Button>
           <Button component={NavLink} path="/workflowDefs">
             Definitions
@@ -72,16 +80,18 @@ export default function App() {
           <Button component={NavLink} path="/workbench">
             Workbench
           </Button>
-          <CustomAppBarButtons />
 
-          <div className={classes.toolbarRight}>
-            <AppBarModules />
-          </div>
+          {appBarButtons}
+
+          <div className={classes.toolbarRight}>{appBarModules}</div>
         </Toolbar>
       </AppBar>
       <div className={classes.body}>
         <Switch>
           <Route exact path="/">
+            <Deployments />
+          </Route>
+          <Route exact path="/search/workflows">
             <WorkflowSearch />
           </Route>
           <Route exact path="/search/tasks">
@@ -89,6 +99,9 @@ export default function App() {
           </Route>
           <Route path="/execution/:id/:taskId?">
             <Execution />
+          </Route>
+          <Route path="/process/:workflowName">
+            <WorkflowProcesses/>
           </Route>
           <Route exact path="/workflowDefs">
             <WorkflowDefinitions />
@@ -126,7 +139,8 @@ export default function App() {
           <Route exact path="/kitchen/gantt">
             <Gantt />
           </Route>
-          <CustomRoutes />
+
+          {customRoutes}
         </Switch>
       </div>
     </div>

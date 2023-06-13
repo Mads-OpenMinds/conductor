@@ -2,9 +2,11 @@ import React from "react";
 import _ from "lodash";
 import { NavLink, KeyValueTable } from "../../components";
 import { useTime } from "../../hooks/useTime";
+import { useAppContext } from "../../export";
 
 export default function TaskSummary({ taskResult }) {
   const now = useTime();
+  const { customTaskSummaryRows } = useAppContext();
 
   // To accommodate unexecuted tasks, read type & name & ref out of workflow
   const data = [
@@ -93,14 +95,14 @@ export default function TaskSummary({ taskResult }) {
     });
   }
   if (taskResult.workflowTask.type === "SUB_WORKFLOW") {
+    const subWorkflowName =
+      taskResult.inputData?.subWorkflowName ||
+      taskResult.workflowTask?.subWorkflowParam?.name;
     data.push({
       label: "Subworkflow Definition",
       value: (
-        <NavLink
-          newTab
-          path={`/workflowDef/${taskResult.workflowTask.subWorkflowParam.name}`}
-        >
-          {taskResult.workflowTask.subWorkflowParam.name}{" "}
+        <NavLink newTab path={`/workflowDef/${subWorkflowName}`}>
+          {subWorkflowName}{" "}
         </NavLink>
       ),
     });
@@ -120,6 +122,7 @@ export default function TaskSummary({ taskResult }) {
     data.push({
       label: "Externalized Input",
       value: taskResult.externalInputPayloadStoragePath,
+      type: "externalTaskInput",
     });
   }
 
@@ -127,7 +130,18 @@ export default function TaskSummary({ taskResult }) {
     data.push({
       label: "Externalized Output",
       value: taskResult.externalOutputPayloadStoragePath,
+      type: "externalTaskOutput",
     });
+  }
+
+  for (const row of customTaskSummaryRows) {
+    const rendered = row.renderer(taskResult);
+    if (rendered !== undefined) {
+      data.push({
+        label: row.label,
+        value: rendered,
+      });
+    }
   }
 
   return <KeyValueTable data={data} />;

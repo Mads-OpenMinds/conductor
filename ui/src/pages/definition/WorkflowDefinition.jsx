@@ -22,7 +22,6 @@ import {
 import SaveWorkflowDialog from "./SaveWorkflowDialog";
 import update from "immutability-helper";
 import { usePushHistory } from "../../components/NavLink";
-import { timestampRenderer } from "../../utils/helpers";
 
 import {
   KeyboardArrowLeftRounded,
@@ -67,8 +66,8 @@ const useStyles = makeStyles({
     gap: 8,
   },
   editorLineDecorator: {
-    backgroundColor: "rgb(45, 45, 45, 0.1)"
-  }
+    backgroundColor: "rgb(45, 45, 45, 0.1)",
+  },
 });
 
 const actions = {
@@ -142,7 +141,7 @@ export default function Workflow() {
   const { data: namesAndVersions, refetch: refetchNamesAndVersions } =
     useWorkflowNamesAndVersions();
   const versions = useMemo(
-    () => namesAndVersions.get(workflowName) || [],
+    () => _.get(namesAndVersions, workflowName, []),
     [namesAndVersions, workflowName]
   );
 
@@ -240,21 +239,26 @@ export default function Workflow() {
   };
 
   const handleWorkflowNodeClick = (node) => {
-    let editor = editorRef.current.getModel()
-    let searchResult = editor.findMatches(`"taskReferenceName": "${node.ref}"`)
-    if (searchResult.length){
-      editorRef.current.revealLineInCenter(searchResult[0]?.range?.startLineNumber, 0);
-      setDecorations(editorRef.current.deltaDecorations(decorations, [
-        {
-          range: searchResult[0]?.range,
-          options: {
-            isWholeLine: true,
-            inlineClassName: classes.editorLineDecorator
-          }
-        }
-      ]))
+    let editor = editorRef.current.getModel();
+    let searchResult = editor.findMatches(`"taskReferenceName": "${node.ref}"`);
+    if (searchResult.length) {
+      editorRef.current.revealLineInCenter(
+        searchResult[0]?.range?.startLineNumber,
+        0
+      );
+      setDecorations(
+        editorRef.current.deltaDecorations(decorations, [
+          {
+            range: searchResult[0]?.range,
+            options: {
+              isWholeLine: true,
+              inlineClassName: classes.editorLineDecorator,
+            },
+          },
+        ])
+      );
     }
-  }
+  };
 
   return (
     <>
@@ -296,7 +300,7 @@ export default function Workflow() {
               <MenuItem value="">Latest Version</MenuItem>
               {versions.map((row) => (
                 <MenuItem value={row.version} key={row.version}>
-                  Version {row.version} ({versionTime(row)})
+                  Version {row.version}
                 </MenuItem>
               ))}
             </Select>
@@ -374,12 +378,5 @@ export default function Workflow() {
         </div>
       </div>
     </>
-  );
-}
-
-function versionTime(versionObj) {
-  return (
-    versionObj &&
-    timestampRenderer(versionObj.updateTime || versionObj.createTime)
   );
 }

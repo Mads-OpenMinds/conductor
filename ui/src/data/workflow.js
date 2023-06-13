@@ -1,19 +1,19 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "react-query";
-import { useFetchContext, fetchWithContext } from "../plugins/fetch";
+import useAppContext from "../hooks/useAppContext";
 import { useFetch, useFetchParallel } from "./common";
-import { useEnv } from "../plugins/env";
 import qs from "qs";
 
 const STALE_TIME_WORKFLOW_DEFS = 600000; // 10 mins
 const STALE_TIME_SEARCH = 60000; // 1 min
 
 export function useWorkflowSearch(searchObj) {
-  const fetchContext = useFetchContext();
+  const { fetchWithContext, ready, stack } = useAppContext();
+
   const pathRoot = "/workflow/search?";
 
   return useQuery(
-    [fetchContext.stack, pathRoot, searchObj],
+    [stack, pathRoot, searchObj],
     () => {
       const { rowsPerPage, page, sort, freeText, query } = searchObj;
       const path =
@@ -25,11 +25,11 @@ export function useWorkflowSearch(searchObj) {
           freeText: freeText,
           query: query,
         });
-      return fetchWithContext(path, fetchContext);
+      return fetchWithContext(path);
       // staletime to ensure stable view when paginating back and forth (even if underlying results change)
     },
     {
-      enabled: fetchContext.ready,
+      enabled: ready,
       keepPreviousData: true,
       staleTime: STALE_TIME_SEARCH,
     }
@@ -50,7 +50,7 @@ export function useWorkflowsByIds(workflowIds, reactQueryOptions) {
 }
 
 export function useInvalidateWorkflows() {
-  const { stack } = useEnv();
+  const { stack } = useAppContext();
   const client = useQueryClient();
 
   return function (workflowIds) {
@@ -88,6 +88,16 @@ export function useWorkflowDefs() {
   });
 }
 
+export function useWorkflowNamesAndVersions() {
+  return useFetch(
+    ["workflowNamesAndVersions"],
+    "/metadata/workflow/names-and-versions",
+    {
+      staleTime: STALE_TIME_WORKFLOW_DEFS,
+    }
+  );
+}
+
 export function useLatestWorkflowDefs() {
   const { data, ...rest } = useWorkflowDefs();
 
@@ -115,11 +125,11 @@ export function useLatestWorkflowDefs() {
 
 export function useSaveWorkflow(callbacks) {
   const path = "/metadata/workflow";
-  const fetchContext = useFetchContext();
+  const { fetchWithContext } = useAppContext();
 
   return useMutation(
     ({ body, isNew }) =>
-      fetchWithContext(path, fetchContext, {
+      fetchWithContext(path, {
         method: isNew ? "post" : "put",
         headers: {
           "Content-Type": "application/json",
@@ -131,68 +141,30 @@ export function useSaveWorkflow(callbacks) {
 }
 
 export function useWorkflowNames() {
-  const { data } = useWorkflowDefs();
+  const { data } = useWorkflowNamesAndVersions();
   // Extract unique names
   return useMemo(() => {
     if (data) {
-      const nameSet = new Set(data.map((def) => def.name));
-      return Array.from(nameSet);
+      return Object.keys(data).sort();
     } else {
       return [];
     }
   }, [data]);
 }
 
-// Version numbers do not necessarily start, or run contiguously from 1. Could be arbitrary integers e.g. 52335678.
-// By convention they should be monotonic (ever increasing) wrt time.
-export function useWorkflowNamesAndVersions() {
-  const { data, ...rest } = useWorkflowDefs();
-
-  const newData = useMemo(() => {
-    const retval = new Map();
-    if (data) {
-      for (let def of data) {
-        let arr;
-        if (!retval.has(def.name)) {
-          arr = [];
-          retval.set(def.name, arr);
-        } else {
-          arr = retval.get(def.name);
-        }
-        arr.push({
-          version: def.version,
-          createTime: def.createTime,
-          updateTime: def.updateTime,
-        });
-      }
-
-      // Sort arrays in place
-      retval.forEach((val) => val.sort());
-    }
-    return retval;
-  }, [data]);
-
-  return { ...rest, data: newData };
-}
-
 export function useStartWorkflow(callbacks) {
   const path = "/workflow";
-  const fetchContext = useFetchContext();
+  const { fetchWithContext } = useAppContext();
 
   return useMutation(
     ({ body }) =>
-      fetchWithContext(
-        path,
-        fetchContext,
-        {
-          method: "post",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
+      fetchWithContext(path, {
+        method: "post",
+        headers: {
+          "Content-Type": "application/json",
         },
-        false
-      ),
+        body: JSON.stringify(body),
+      }),
     callbacks
   );
 }

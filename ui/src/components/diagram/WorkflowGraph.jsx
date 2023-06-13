@@ -338,21 +338,10 @@ class WorkflowGraph extends React.Component {
     inner.selectAll("g.node").on("click", this.handleClick);
   };
 
-  /**
-   * Get the taskRef id base on browsers
-   * @param e
-   * @returns {string | undefined} The id of the task ref
-   */
-  getTaskRef = (e) => {
-    const flag = navigator.userAgent.toLowerCase().indexOf("firefox") > -1 || navigator.userAgent.toLowerCase().indexOf("chrome") > -1;
-    if (flag) {
-      return e.target?.parentNode?.id;
-    }
-    return e?.path[1]?.id || e?.path[2]?.id; // could be 2 layers down
-  };
-
   handleClick = (e) => {
-    const taskRef = e.composedPath()[1].id || e.composedPath()[2].id; // could be 2 layers down
+    const path = e.path || (e.composedPath && e.composedPath());
+
+    const taskRef = path[1].id || path[2].id; // could be 2 layers down
     const node = this.graph.node(taskRef);
     if (node.type === "DF_TASK_PLACEHOLDER") {
       if (this.props.onClick) this.props.onClick({ ref: node.firstDfRef });
@@ -486,7 +475,6 @@ class WorkflowGraph extends React.Component {
     const graph = this.graph;
 
     const v = dagGraph.node(nodeId) || graph.node(nodeId); // synthetic nodes (e.g. DF placeholder) not found in 'dag' but preloaded into local graph.
-
     let retval = {
       id: v.ref,
       class: `type-${v.type}`,
@@ -549,8 +537,33 @@ class WorkflowGraph extends React.Component {
         retval.shape = "rect";
     }
 
-    if (_.size(v.taskResults) > 1) {
-      retval.label += `\n${v.taskResults.length} Attempts`;
+    if (v.taskResults[0].failedInstances && v.status === "FAILED"){
+      if (v.taskResults[0].failedInstances === 1) {
+        retval.label += `\n \n🔴${v.taskResults[0].failedInstances} Failed Instance`
+        retval.style += 'fill: #ffd47f'
+      } else {
+        retval.label += `\n \n🔴${v.taskResults[0].failedInstances} Failed Instances`
+        retval.style += 'fill: #ffd47f'
+      }
+    }
+
+    if (v.taskResults[0].failedInstances===undefined &&_.size(v.taskResults) > 1) {
+      console.log(v)
+      retval.label += `\n🔴${v.taskResults.length} Attempts`;
+      retval.style += 'fill: #ffd47f';
+
+    }
+
+    if (v.taskResults[0].runningInstances && v.status === "IN_PROGRESS"){
+      if (v.taskResults[0].runningInstances === 1){
+        retval.label += `\n \n🟢${v.taskResults[0].runningInstances} Running Instance`
+        retval.style += 'fill: #ffd47f'
+      } else {
+        retval.label += `\n \n🟢${v.taskResults[0].runningInstances} Running Instances`
+        retval.style += 'fill: #ffd47f'
+      }
+
+
     }
 
     if (this.props.executionMode) {
@@ -680,7 +693,7 @@ function barRenderer(parent, bbox, node) {
     return {
       x:
         (node.fanDir === "down" && point.y > node.y) ||
-          (node.fanDir === "up" && point.y < node.y)
+        (node.fanDir === "up" && point.y < node.y)
           ? point.x
           : intersect.rect(node, point).x,
       y: point.y < node.y ? node.y - bbox.height / 2 : node.y + bbox.height / 2,
@@ -700,7 +713,8 @@ function stackRenderer(parent, bbox, node) {
     .attr("height", bbox.height)
     .attr(
       "transform",
-      `translate(${-bbox.width / 2 - STACK_OFFSET * 2}, ${-bbox.height / 2 - STACK_OFFSET * 2
+      `translate(${-bbox.width / 2 - STACK_OFFSET * 2}, ${
+        -bbox.height / 2 - STACK_OFFSET * 2
       })`
     );
   group
@@ -709,7 +723,8 @@ function stackRenderer(parent, bbox, node) {
     .attr("height", bbox.height)
     .attr(
       "transform",
-      `translate(${-bbox.width / 2 - STACK_OFFSET}, ${-bbox.height / 2 - STACK_OFFSET
+      `translate(${-bbox.width / 2 - STACK_OFFSET}, ${
+        -bbox.height / 2 - STACK_OFFSET
       })`
     );
   group

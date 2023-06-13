@@ -6,17 +6,23 @@ describe("Landing Page", () => {
       fixture: "metadataWorkflow.json",
     });
     cy.intercept("/api/metadata/taskdefs", { fixture: "metadataTasks.json" });
+    cy.intercept("/api/metadata/workflow/names-and-versions", {
+      fixture: "namesAndVersions.json",
+    });
   });
 
   it("Homepage preloads with default query", () => {
     cy.visit("/");
     cy.contains("Search Execution");
-    cy.contains("Page 1 of 5");
+    cy.contains("Page 1 of 1");
     cy.get(".rdt_TableCell").contains("feature_value_compute_workflow");
   });
 
   it("Workflow name dropdown", () => {
-    cy.get(".MuiAutocomplete-inputRoot input").first().click();
+    cy.get(".MuiAutocomplete-inputRoot input")
+      .first()
+      .should("be.enabled", { timeout: 5000 })
+      .click();
     cy.get("li.MuiAutocomplete-option")
       .contains("Do_While_Workflow_Iteration_Fix")
       .click();

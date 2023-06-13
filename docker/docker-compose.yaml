@@ -4,8 +4,7 @@ services:
   conductor-server:
     environment:
       - CONFIG_PROP=config-local.properties
-    image: conductor:server
-    container_name: conductor-server
+    image: conductor-server:dev
     build:
       context: ../
       dockerfile: docker/server/Dockerfile
@@ -20,11 +19,8 @@ services:
       retries: 12
     links:
       - elasticsearch:es
-      - redis:rs
     depends_on:
       elasticsearch:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     logging:
       driver: "json-file"
@@ -35,8 +31,7 @@ services:
   conductor-ui:
     environment:
       - WF_SERVER=http://conductor-server:8080
-    image: conductor:ui
-    container_name: conductor-ui
+    image: conductor-ui:dev
     build:
       context: ../
       dockerfile: docker/ui/Dockerfile
@@ -48,20 +43,8 @@ services:
       - conductor-server
     stdin_open: true
 
-  redis:
-    image: redis:6.2.3-alpine
-    volumes:
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
-    networks:
-      - internal
-    ports:
-      - 6379:6379
-    healthcheck:
-      test: [ "CMD", "redis-cli","ping" ]
-
   elasticsearch:
     image: elasticsearch:6.8.15
-    container_name: elasticsearch
     environment:
       - "ES_JAVA_OPTS=-Xms512m -Xmx1024m"
       - transport.host=0.0.0.0
@@ -75,7 +58,7 @@ services:
       - 9200:9200
       - 9300:9300
     healthcheck:
-      test: wget http://localhost:9200/ -O /dev/null
+      test: timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/9300'
       interval: 5s
       timeout: 5s
       retries: 12
@@ -85,8 +68,25 @@ services:
         max-size: "1k"
         max-file: "3"
 
+  kibana:
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    image: kibana:6.8.15
+    volumes:
+      - kibanadata:/usr/share/kibana/data
+    networks:
+      - internal
+    ports:
+      - 5601:5601
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=http://host.docker.internal:9200
+
 volumes:
   esdata-conductor:
+    driver: local
+  kibanadata:
     driver: local
 
 networks:
