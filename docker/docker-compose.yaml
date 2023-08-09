@@ -1,5 +1,6 @@
 version: '2.3'
 
+name: conductor-dev
 services:
   conductor-server:
     environment:
